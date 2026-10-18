@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Deal Closer - The BD Pitch Game</title>
+<style>
+:root{--bg:#0f1420;--panel:#171d2e;--line:#2c3550;--txt:#e8ecf6;--dim:#93a0bd;--acc:#5ec1ff;--good:#3fb950;--bad:#f85149}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+#app{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:22px;color:var(--acc);margin:0}
+.sub{color:var(--dim);font-size:13px;margin-bottom:10px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:12px}
+.pick{display:block;width:100%;text-align:left;background:#121828;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px 0;cursor:pointer;font-size:14px}
+.pick:hover{border-color:var(--acc)}
+.pick.good{border-color:var(--good)}.pick.bad{border-color:var(--bad)}
+.pts{float:right;color:var(--dim)}
+.stage{font-size:12px;color:var(--acc);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.big{font-size:36px;color:var(--acc);margin:8px 0}
+button.hot{background:var(--acc);color:#08101e;border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}
+.bar{height:8px;background:#121828;border-radius:4px;margin:10px 0}.bar i{display:block;height:100%;background:var(--acc);border-radius:4px;transition:width .3s}
+</style>
+</head>
+<body>
+<div id="app">
+<header><h1>DEAL CLOSER</h1><div class="sub">Read the room. Pick the hook, the ask, and the person. 5 deals on the table.</div>
+<div>Round <b id="round">1</b>/5 - Score <b id="score">0</b></div>
+<div class="bar"><i id="prog" style="width:0%"></i></div>
+</header>
+<main id="screen"></main>
+</div>
+<script>
+"use strict";
+const SCEN=[
+ {biz:"A heritage denim brand. Sales flat three quarters, a famous archive, zero collabs, new CEO from a sneaker company.",
+  hooks:[["Your archive is a goldmine - I can put it on artists who sell out tours.",3],["I can 10x your ad performance with AI creative.",0],["I loved your spring lookbook, big fan!",1]],
+  asks:[["15 minutes to show you two artist partners who fit the archive.",3],["A $50k/month retainer, starting Monday.",0],["Just add me to your newsletter list.",1]],
+  contacts:[["The new CEO - she was hired to change things.",3],["The marketing intern (they answer fast).",1],["The general info inbox.",0]]},
+ {biz:"A video game publisher. Q2 shows marketing spend up 30%, revenue up 4%. They just bought a beloved RPG studio.",
+  hooks:[["You're paying more for ads while revenue crawls - music culture is cheaper heat.",3],["Games are the future, let's chat!",1],["I can save you money on cloud hosting.",0]],
+  asks:[["15 minutes on music partnerships for the new RPG studio.",3],["A board seat.",0],["Send me free game keys.",0]],
+  contacts:[["The VP of the studio they just acquired.",2],["The CFO who signed the earnings report.",3],["Customer support.",0]]},
+ {biz:"A fast-casual food chain. 200 stores, loyal lunch crowd, dead after 6pm. Founder still runs it.",
+  hooks:[["Your stores are empty at night - artist pop-ups turn dead hours into lines around the block.",3],["I can optimize your supply chain.",0],["I eat at your places all the time.",1]],
+  asks:[["A pilot: one store, one night, one artist. 15 minutes to walk you through it.",3],["Franchise rights for Asia.",0],["Free lunch for a year.",0]],
+  contacts:[["The founder - night traffic is her problem and her call.",3],["A franchisee in another state.",1],["The corporate jobs portal.",0]]},
+ {biz:"A spirits brand. Flagship product down 8%, but their festival sponsorships kept selling out.",
+  hooks:[["Your festival tents sell out while the flagship drops - the brand is music, not liquid.",3],["I can redesign the bottle.",0],["Let me manage your social media.",1]],
+  asks:[["15 minutes on an artist-led residency series for the festival platform.",3],["Title sponsorship of my podcast.",1],["A six-figure consulting contract, sight unseen.",0]],
+  contacts:[["The partnerships director who owns the festival budget.",3],["The distillery floor manager.",0],["The PR agency of record.",1]]},
+ {biz:"A streaming service. Subscriber growth stalled; executives keep mentioning 'live experiences' on earnings calls.",
+  hooks:[["You need events people can't get elsewhere - artist-led experiences with built-in demand.",3],["I can cut your content costs in half.",0],["I have strong opinions about your UI.",1]],
+  asks:[["15 minutes on programming for the experiences relaunch.",3],["A first-look deal for all my future ideas.",0],["An intro to a celebrity, any celebrity.",0]],
+  contacts:[["The exec who keeps saying 'experiences' on the calls.",3],["The comments section of their announcements.",0],["A mid-level accountant.",0]]},
+ {biz:"A toy company. Nostalgia lines outsell new lines 3-to-1. The CEO collects vintage posters.",
+  hooks:[["Nostalgia is your growth engine - music IP from the same era is the natural collab.",3],["Kids love tablets, let's make an app.",0],["I can get you cheaper cardboard.",0]],
+  asks:[["15 minutes on a music-IP capsule for the nostalgia line.",3],["A tour of the factory.",1],["Exclusive global distribution rights.",0]],
+  contacts:[["The CEO - collector to collector.",3],["The summer intern cohort.",0],["The wholesaler two tiers down.",1]]},
+ {biz:"A hotel group. Business travel flat, weekends full of weddings, zero identity between properties.",
+  hooks:[["Each property needs a sound - music identity is why guests remember one hotel over another.",3],["I can renegotiate your laundry contracts.",0],["Hotels are buildings. I know buildings.",1]],
+  asks:[["15 minutes on a sonic identity pilot at the flagship.",3],["A lifetime loyalty membership.",0],["Naming rights to the penthouse.",0]],
+  contacts:[["The brand VP launching the repositioning.",3],["The night auditor at one location.",0],["A wedding planner who books the ballrooms.",1]]},
+ {biz:"A legacy media company. Print revenue declining 12% a year, podcast division quietly growing 40%.",
+  hooks:[["Your podcast line grows 40% while print sinks - music programming is the accelerant.",3],["Print is back, trust me.",0],["I can proofread really fast.",0]],
+  asks:[["15 minutes on music franchises for the podcast network.",3],["A weekly column with no editor.",0],["Their subscriber list.",0]],
+  contacts:[["The head of the podcast division.",3],["The print circulation manager.",0],["Letters to the editor.",0]]}
+];
+let S,deck;
+const $=id=>document.getElementById(id);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function newGame(){
+ S={round:0,score:0,picks:[]};
+ deck=shuffle(SCEN).slice(0,5);
+ renderDeal();
+}
+function renderDeal(){
+ if(S.round>=5)return final();
+ const scn=deck[S.round];
+ S.stage=0;S.sel={};
+ $("round").textContent=S.round+1;
+ $("score").textContent=S.score;
+ $("prog").style.width=(S.round/5*100)+"%";
+ const sc=$("screen");sc.innerHTML="";
+ const p=document.createElement("div");p.className="panel";
+ p.innerHTML='<div class="stage">The target</div><p>'+scn.biz+'</p>';
+ const st=document.createElement("div");st.id="stages";p.appendChild(st);
+ sc.appendChild(p);
+ renderStage();
+}
+function renderStage(){
+ const scn=deck[S.round];
+ const st=$("stages");st.innerHTML="";
+ const stages=[["The hook - why should they care?","hooks"],["The ask - what do you want?","asks"],["The person - who gets the email?","contacts"]];
+ if(S.stage>=3){
+  const total=S.sel.hooks[1]+S.sel.asks[1]+S.sel.contacts[1];
+  S.score+=total;S.picks.push(total);
+  const verdict=total>=8?"CLOSED - they take the meeting.":total>=5?"Maybe. They forward it around.":total>=3?"Polite pass.":"Left on read.";
+  const d=document.createElement("div");d.className="panel";
+  d.innerHTML='<div class="stage">Outcome</div><p><b>'+verdict+'</b> ('+total+'/9)</p>'
+   +"<p style='color:#93a0bd;font-size:13px'>Hook "+S.sel.hooks[1]+" + Ask "+S.sel.asks[1]+" + Person "+S.sel.contacts[1]+"</p>";
+  const b=document.createElement("button");b.className="hot";b.textContent=S.round<4?"Next deal":"Final grade";
+  b.onclick=()=>{S.round++;renderDeal();};
+  d.appendChild(b);st.appendChild(d);
+  $("score").textContent=S.score;
+  return;
+ }
+ const [label,key]=stages[S.stage];
+ const d=document.createElement("div");
+ d.innerHTML='<div class="stage">'+label+'</div>';
+ shuffle(scn[key]).forEach(opt=>{
+  const b=document.createElement("button");b.className="pick";
+  b.innerHTML=opt[0];
+  b.onclick=()=>{
+   S.sel[key]=opt;
+   b.classList.add(opt[1]>=3?"good":opt[1]>=1?"":"bad");
+   b.innerHTML+='<span class="pts">+'+opt[1]+'</span>';
+   Array.from(st.querySelectorAll("button.pick")).forEach(x=>x.disabled=true);
+   setTimeout(()=>{S.stage++;renderStage();},650);
+  };
+  d.appendChild(b);
+ });
+ st.appendChild(d);
+}
+function final(){
+ const max=45;
+ const pct=S.score/max;
+ const grade=pct>=0.85?"S - RAINMAKER":pct>=0.65?"A - CLOSER":pct>=0.45?"B - GETTING MEETINGS":pct>=0.25?"C - COLD EMAILER":"D - READ THE EARNINGS REPORT FIRST";
+ const sc=$("screen");sc.innerHTML="";
+ $("prog").style.width="100%";
+ const p=document.createElement("div");p.className="panel";
+ p.innerHTML='<div class="stage">Final grade</div><div class="big">'+grade+'</div><p>Score '+S.score+'/'+max+' across 5 deals.</p><p style="color:#93a0bd;font-size:13px">The whole game: read what the company actually said (earnings calls, filings), find the person whose problem it is, ask for 15 minutes.</p>';
+ const b=document.createElement("button");b.className="hot";b.textContent="Play again";b.onclick=newGame;
+ p.appendChild(b);sc.appendChild(p);
+}
+newGame();
+// ---- self test (?test=1) ----
+if(location.search.indexOf("test=1")>=0){
+ try{
+  const t=[];
+  // auto-play with best choices deterministically
+  S={round:0,score:0,picks:[]};deck=SCEN.slice(0,5);
+  let guard=0;
+  while(S.round<5&&guard++<50){
+   const scn=deck[S.round];
+   const best=k=>scn[k].reduce((a,b)=>b[1]>a[1]?b:a);
+   const tot=best("hooks")[1]+best("asks")[1]+best("contacts")[1];
+   S.score+=tot;S.picks.push(tot);S.round++;
+  }
+  t.push(["5 rounds scored",S.picks.length===5]);
+  t.push(["perfect play scores high",S.score>=40]);
+  t.push(["every round scorable 0-9",S.picks.every(x=>x>=0&&x<=9)]);
+  const pass=t.every(x=>x[1]);
+  document.title=pass?"TEST PASS":"TEST FAIL";
+  const d=document.createElement("div");d.id="test-result";d.style.cssText="position:fixed;top:8px;right:8px;background:"+(pass?"#3fb950":"#f85149")+";color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;z-index:9";
+  d.textContent=(pass?"TEST PASS: ":"TEST FAIL: ")+t.map(x=>x[0]+(x[1]?" ok":" FAIL")).join("; ");
+  document.body.appendChild(d);
+ }catch(e){document.title="TEST FAIL "+e.message;}
+}
+</script>
+</body>
+</html>
